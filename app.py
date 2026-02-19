@@ -7,11 +7,19 @@ from auth import login_required
 app = Flask(__name__)
 app.secret_key = "1a2b3c4d5e6f7g8h9i"
 
-
 @app.get("/")
 @login_required
 def index():
-    return render_template("index.html")
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM incidents ORDER BY created_at DESC")
+    incidents = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("index.html", incidents=incidents)
 
 
 @app.route("/signup", methods=["GET", "POST"])
@@ -81,6 +89,58 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+@app.route("/incidents/new", methods=["GET", "POST"])
+@login_required
+def new_incident():
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        category = request.form.get("category", "").strip()
+        severity = request.form.get("severity", "").strip()
+        status = request.form.get("status", "").strip()
+        description = request.form.get("description", "").strip()
+
+        if not title or not category or not severity or not status:
+            flash("Please fill all required fields.")
+            return redirect(url_for("new_incident"))
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO incidents (title, category, severity, status, description, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (title, category, severity, status, description, session["user_id"]),
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        flash("Incident created.")
+        return redirect(url_for("index"))
+
+    return render_template("new_incident.html")
+
+
+@app.get("/incidents/<int:incident_id>")
+@login_required
+def incident_detail(incident_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM incidents WHERE id=%s", (incident_id,))
+    incident = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if not incident:
+        return "Incident not found", 404
+
+    return render_template("incident_detail.html", incident=incident)
 
 
 if __name__ == "__main__":

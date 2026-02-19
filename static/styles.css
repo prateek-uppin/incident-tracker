@@ -70,3 +70,6 @@ button:hover { background: rgba(99,102,241,0.35); }
 }
 
 .muted { color: #94a3b8; }
+
+.item { display: block; }
+.item:hover { border-color: rgba(255,255,255,0.18); }

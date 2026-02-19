@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Incident details</h1>
+
+<div class="card">
+  <h2>{{ incident.title }}</h2>
+
+  <p><b>Category:</b> {{ incident.category }}</p>
+  <p><b>Severity:</b> {{ incident.severity }}</p>
+  <p><b>Status:</b> {{ incident.status }}</p>
+  <p class="muted"><b>Created at:</b> {{ incident.created_at }}</p>
+
+  {% if incident.description %}
+    <p><b>Description:</b><br>{{ incident.description }}</p>
+  {% endif %}
+</div>
+
+<p><a href="{{ url_for('index') }}">← Back to incidents</a></p>
+{% endblock %}
