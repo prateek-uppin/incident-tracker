@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Delete incident</h1>
+
+<div class="card">
+  <p>Are you sure you want to delete this incident?</p>
+  <p><b>{{ incident.title }}</b></p>
+
+  <form method="post">
+    <button type="submit">Yes, delete</button>
+  </form>
+
+  <p class="muted"><a href="{{ url_for('incident_detail', incident_id=incident.id) }}">Cancel</a></p>
+</div>
+{% endblock %}

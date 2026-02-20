@@ -9,10 +9,13 @@
 <body>
   <div class="container">
     <header class="topbar">
-      <div class="brand">Incident Tracker</div>
+      <div class="brand">
+        <a href="{{ url_for('index') }}">Incident Tracker</a>
+      </div>
       <nav class="nav">
         {% if session.get("user_id") %}
-          <span class="hello">Hi, {{ session.get("user_name") }}</span>
+          <a class="hello" href="{{ url_for('profile') }}">Hi, {{ session.get("user_name") }}</a>
+          <a href="{{ url_for('index') }}">View Incidents</a>
           <a href="{{ url_for('new_incident') }}">New</a>
           <a href="{{ url_for('logout') }}">Logout</a>
         {% else %}

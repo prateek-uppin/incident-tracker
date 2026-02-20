@@ -1,22 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Incidents</h1>
+<div class="row">
+  <h1>Incidents</h1>
+
+  <a class="btn" href="{{ url_for('export_csv', severity=severity, status=status) }}">
+    Export CSV
+  </a>
+</div>
+
+<form method="get" class="filters card">
+  <div>
+    <label>Severity</label>
+    <select name="severity">
+      <option value="">All</option>
+      {% for s in ["Low","Medium","High","Critical"] %}
+        <option value="{{ s }}" {% if severity==s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label>Status</label>
+    <select name="status">
+      <option value="">All</option>
+      {% for st in ["Open","In Progress","Resolved"] %}
+        <option value="{{ st }}" {% if status==st %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <button type="submit">Apply</button>
+</form>
 
 {% if incidents %}
   <div class="list">
     {% for incident in incidents %}
-        <a class="card item" href="{{ url_for('incident_detail', incident_id=incident.id) }}">
-            <h3>{{ incident.title }}</h3>
-            <p>
-                <b>Category:</b> {{ incident.category }} |
-                <b>Severity:</b> {{ incident.severity }} |
-                <b>Status:</b> {{ incident.status }}
-            </p>
-            <p class="muted">Created at: {{ incident.created_at }}</p>
-        </a>
+      <a class="card item" href="{{ url_for('incident_detail', incident_id=incident.id) }}">
+        <div class="item-top">
+          <div class="title">{{ incident.title }}</div>
+          <div class="badge sev-{{ incident.severity|lower }}">{{ incident.severity }}</div>
+        </div>
+        <div class="meta">
+          <span>{{ incident.category }}</span>
+          <span>•</span>
+          <span class="status">{{ incident.status }}</span>
+          <span>•</span>
+          <span>{{ incident.created_at }}</span>
+        </div>
+      </a>
     {% endfor %}
   </div>
 {% else %}
-  <p>No incidents found.</p>
+  <div class="card">No incidents found.</div>
 {% endif %}
 {% endblock %}

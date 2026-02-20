@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Profile</h1>
+
+<div class="card">
+  <p><b>Name:</b> {{ user.name }}</p>
+  <p><b>Email:</b> {{ user.email }}</p>
+  <p class="muted"><b>Account created:</b> {{ user.created_at }}</p>
+</div>
+
+<p><a href="{{ url_for('index') }}">← Back to incidents</a></p>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Edit incident</h1>
+
+<form method="post" class="card">
+  <label>Title</label>
+  <input name="title" value="{{ incident.title }}" required>
+
+  <label>Category</label>
+  <select name="category" required>
+    {% for c in ["Application","Infrastructure","Security","Data","Other"] %}
+      <option value="{{ c }}" {% if incident.category==c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+
+  <label>Severity</label>
+  <select name="severity" required>
+    {% for s in ["Low","Medium","High","Critical"] %}
+      <option value="{{ s }}" {% if incident.severity==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+
+  <label>Status</label>
+  <select name="status" required>
+    {% for st in ["Open","In Progress","Resolved"] %}
+      <option value="{{ st }}" {% if incident.status==st %}selected{% endif %}>{{ st }}</option>
+    {% endfor %}
+  </select>
+
+  <label>Description</label>
+  <textarea name="description" rows="5">{{ incident.description }}</textarea>
+
+  <button type="submit">Save changes</button>
+</form>
+
+<p><a href="{{ url_for('incident_detail', incident_id=incident.id) }}">← Back to incident</a></p>
+{% endblock %}

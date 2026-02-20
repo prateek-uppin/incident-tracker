@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Response
+import csv
+import io
 
 from db import get_connection
 from auth import login_required
@@ -10,16 +13,32 @@ app.secret_key = "1a2b3c4d5e6f7g8h9i"
 @app.get("/")
 @login_required
 def index():
+    severity = request.args.get("severity", "")
+    status = request.args.get("status", "")
+
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM incidents ORDER BY created_at DESC")
+    query = "SELECT * FROM incidents WHERE 1=1"
+    params = []
+
+    if severity:
+        query += " AND severity=%s"
+        params.append(severity)
+
+    if status:
+        query += " AND status=%s"
+        params.append(status)
+
+    query += " ORDER BY created_at DESC"
+
+    cursor.execute(query, params)
     incidents = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return render_template("index.html", incidents=incidents)
+    return render_template("index.html", incidents=incidents, severity=severity, status=status)
 
 
 @app.route("/signup", methods=["GET", "POST"])
@@ -84,11 +103,63 @@ def login():
 
     return render_template("login.html")
 
+@app.get("/profile")
+@login_required
+def profile():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
 
-@app.get("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
+    cursor.execute("SELECT id, name, email, created_at FROM users WHERE id=%s", (session["user_id"],))
+    user = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("profile.html", user=user)
+
+@app.get("/export")
+@login_required
+def export_csv():
+    severity = request.args.get("severity", "")
+    status = request.args.get("status", "")
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = "SELECT id, title, category, severity, status, created_at FROM incidents WHERE 1=1"
+    params = []
+
+    if severity:
+        query += " AND severity=%s"
+        params.append(severity)
+
+    if status:
+        query += " AND status=%s"
+        params.append(status)
+
+    query += " ORDER BY created_at DESC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Title", "Category", "Severity", "Status", "Created At"])
+    for r in rows:
+        writer.writerow([r["id"], r["title"], r["category"], r["severity"], r["status"], r["created_at"]])
+
+    csv_data = output.getvalue()
+    output.close()
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment;filename=incidents.csv"}
+    )
+
 
 @app.route("/incidents/new", methods=["GET", "POST"])
 @login_required
@@ -142,6 +213,125 @@ def incident_detail(incident_id):
 
     return render_template("incident_detail.html", incident=incident)
 
+@app.post("/incidents/<int:incident_id>/status")
+@login_required
+def update_incident_status(incident_id):
+    new_status = request.form.get("status", "").strip()
+
+    if new_status not in ["Open", "In Progress", "Resolved"]:
+        flash("Invalid status.")
+        return redirect(url_for("incident_detail", incident_id=incident_id))
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "UPDATE incidents SET status=%s WHERE id=%s",
+        (new_status, incident_id),
+    )
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    flash("Status updated.")
+    return redirect(url_for("incident_detail", incident_id=incident_id))
+
+@app.route("/incidents/<int:incident_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_incident(incident_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM incidents WHERE id=%s", (incident_id,))
+    incident = cursor.fetchone()
+
+    if not incident:
+        cursor.close()
+        conn.close()
+        return "Incident not found", 404
+
+    # Simple ownership check (optional but recommended)
+    if incident["created_by"] != session["user_id"]:
+        cursor.close()
+        conn.close()
+        return "Not allowed", 403
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        category = request.form.get("category", "").strip()
+        severity = request.form.get("severity", "").strip()
+        status = request.form.get("status", "").strip()
+        description = request.form.get("description", "").strip()
+
+        if not title or not category or not severity or not status:
+            flash("Please fill all required fields.")
+            cursor.close()
+            conn.close()
+            return redirect(url_for("edit_incident", incident_id=incident_id))
+
+        cursor2 = conn.cursor()
+        cursor2.execute(
+            """
+            UPDATE incidents
+            SET title=%s, category=%s, severity=%s, status=%s, description=%s
+            WHERE id=%s
+            """,
+            (title, category, severity, status, description, incident_id),
+        )
+        conn.commit()
+        cursor2.close()
+
+        cursor.close()
+        conn.close()
+
+        flash("Incident updated.")
+        return redirect(url_for("incident_detail", incident_id=incident_id))
+
+    cursor.close()
+    conn.close()
+    return render_template("edit_incident.html", incident=incident)
+
+@app.route("/incidents/<int:incident_id>/delete", methods=["GET", "POST"])
+@login_required
+def delete_incident(incident_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM incidents WHERE id=%s", (incident_id,))
+    incident = cursor.fetchone()
+
+    if not incident:
+        cursor.close()
+        conn.close()
+        return "Incident not found", 404
+
+    if incident["created_by"] != session["user_id"]:
+        cursor.close()
+        conn.close()
+        return "Not allowed", 403
+
+    if request.method == "POST":
+        cursor2 = conn.cursor()
+        cursor2.execute("DELETE FROM incidents WHERE id=%s", (incident_id,))
+        conn.commit()
+        cursor2.close()
+
+        cursor.close()
+        conn.close()
+
+        flash("Incident deleted.")
+        return redirect(url_for("index"))
+
+    cursor.close()
+    conn.close()
+    return render_template("delete_confirm.html", incident=incident)
+
+
+@app.get("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 if __name__ == "__main__":
     app.run(debug=True)

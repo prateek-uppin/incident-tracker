@@ -73,3 +73,61 @@ button:hover { background: rgba(99,102,241,0.35); }
 
 .item { display: block; }
 .item:hover { border-color: rgba(255,255,255,0.18); }
+
+.row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.btn{
+  display:inline-block;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(34,197,94,0.25);
+  background: rgba(34,197,94,0.12);
+  color:#e5e7eb;
+  font-weight:700;
+}
+
+.btn:hover{
+  background: rgba(34,197,94,0.18);
+}
+
+.brand a{
+  font-weight:700;
+  font-size:18px;
+  color:#e5e7eb;
+  text-decoration:none;
+}
+
+.brand a:hover{
+  text-decoration:underline;
+}
+
+.nav .hello{
+  color:#94a3b8;
+  margin-right:8px;
+  text-decoration:none;
+}
+
+.nav .hello:hover{
+  text-decoration:underline;
+}
+
+.divider{
+  border:none;
+  border-top:1px solid rgba(255,255,255,0.10);
+  margin:14px 0;
+}
+
+.status-form{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.status-form select{
+  flex:1;
+}
