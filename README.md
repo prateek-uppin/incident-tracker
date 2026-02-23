@@ -31,18 +31,30 @@ This app provides a shared way for a team to track incidents and export reports.
 ## Getting started (Local setup)
 
 ### 1) Create a virtual environment
+
 ```bash
 python -m venv venv
+```
 
-2) Activate it-
+### 2) Activate it
+
+Windows (PowerShell):
+
+```powershell
 .\venv\Scripts\activate
+```
 
-3) Install dependencies-
+### 3) Install dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-4) Set up the database-
-Create a MySQL database and tables using the following SQL script:
+### 4) Set up the database
 
+Create a MySQL database and tables:
+
+```sql
 CREATE DATABASE incident_tracker_db;
 USE incident_tracker_db;
 
@@ -65,16 +77,24 @@ CREATE TABLE incidents (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
+```
 
-5) Update DB configuration-
-Edit db.py and set your MySQL:
-host
-user
-password
-database
+### 5) Update DB configuration
 
-6) Run the application-
+Edit `db.py` and set your MySQL:
+- host
+- user
+- password
+- database
+
+### 6) Run the application
+
+```bash
 python app.py
+```
 
 Open in browser:
+
+```
 http://127.0.0.1:5000
+```
