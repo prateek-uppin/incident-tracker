@@ -28,8 +28,7 @@ This app provides a shared way for a team to track incidents and export reports.
 ![CSV export](docs/screenshots/05-export-csv.png)
 
 
-## Getting started (Local setup)
-1)Create a virtual environment-
+### 1) Create a virtual environment
 ```bash
 python -m venv venv
 
