@@ -163,22 +163,39 @@ def profile():
 def export_csv():
     severity = request.args.get("severity", "")
     status = request.args.get("status", "")
+    scope = request.args.get("scope", "all")  # all | mine
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    query = "SELECT id, title, category, severity, status, created_at FROM incidents WHERE 1=1"
+    query = """
+        SELECT
+            i.id,
+            i.title,
+            i.category,
+            i.severity,
+            i.status,
+            u.name AS created_by,
+            i.created_at
+        FROM incidents i
+        JOIN users u ON u.id = i.created_by
+        WHERE 1=1
+    """
     params = []
 
+    if scope == "mine":
+        query += " AND i.created_by=%s"
+        params.append(session["user_id"])
+
     if severity:
-        query += " AND severity=%s"
+        query += " AND i.severity=%s"
         params.append(severity)
 
     if status:
-        query += " AND status=%s"
+        query += " AND i.status=%s"
         params.append(status)
 
-    query += " ORDER BY created_at DESC"
+    query += " ORDER BY i.created_at DESC"
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
@@ -188,9 +205,22 @@ def export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Title", "Category", "Severity", "Status", "Created At"])
+
+    writer.writerow(["ID", "Title", "Category", "Severity", "Status", "Created By", "Created At"])
+
     for r in rows:
-        writer.writerow([r["id"], r["title"], r["category"], r["severity"], r["status"], r["created_at"]])
+        created_at = r.get("created_at")
+        created_at_str = created_at.strftime("%Y-%m-%d %H:%M:%S") if created_at else ""
+
+        writer.writerow([
+            r.get("id", ""),
+            r.get("title", ""),
+            r.get("category", ""),
+            r.get("severity", ""),
+            r.get("status", ""),
+            r.get("created_by", ""),
+            created_at_str,
+        ])
 
     csv_data = output.getvalue()
     output.close()
@@ -198,7 +228,7 @@ def export_csv():
     return Response(
         csv_data,
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment;filename=incidents.csv"}
+        headers={"Content-Disposition": "attachment; filename=incidents.csv"},
     )
 
 
