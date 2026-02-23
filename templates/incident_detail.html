@@ -1,35 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Incident details</h1>
 
-<div class="card">
-    <h2>{{ incident.title }}</h2>
-
-    <p><b>Category:</b> {{ incident.category }}</p>
-    <p><b>Severity:</b> {{ incident.severity }}</p>
-    <p><b>Status:</b> {{ incident.status }}</p>
-    <p>
-        <a href="{{ url_for('edit_incident', incident_id=incident.id) }}">Edit</a>
-    </p>
-    <a href="{{ url_for('delete_incident', incident_id=incident.id) }}">Delete</a>
-
-    <hr class="divider">
-    <h3>Update status</h3>
-    <form method="post" action="{{ url_for('update_incident_status', incident_id=incident.id) }}" class="status-form">
-        <select name="status" required>
-            {% for st in ["Open","In Progress","Resolved"] %}
-            <option value="{{ st }}" {% if incident.status==st %}selected{% endif %}>{{ st }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Update</button>
-    </form>
-
-    <p class="muted"><b>Created at:</b> {{ incident.created_at }}</p>
-
-    {% if incident.description %}
-        <p><b>Description:</b><br>{{ incident.description }}</p>
-    {% endif %}
+<div class="row">
+  <div>
+    <h1>Incident</h1>
+    <div class="muted">Review details and take action.</div>
+  </div>
+  <a class="btn" href="{{ url_for('index') }}">← Back</a>
 </div>
 
-<p><a href="{{ url_for('index') }}">← Back to incidents</a></p>
+<div class="two-col">
+  <div class="card">
+    <div class="item-top">
+      <div>
+        <h2>{{ incident.title }}</h2>
+        <div class="meta">
+          <span><b>Category:</b> {{ incident.category }}</span>
+          <span>•</span>
+          <span><b>Created:</b> {{ incident.created_at }}</span>
+        </div>
+      </div>
+
+      <div class="badges">
+        <span class="badge sev-{{ incident.severity|lower }}">{{ incident.severity }}</span>
+        <span class="badge st-{{ incident.status|lower|replace(' ','-') }}">{{ incident.status }}</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <p><b>Created by:</b> {{ incident.creator_name }}{% if incident.created_by == session.get("user_id") %} (You){% endif %}</p>
+
+    {% if incident.description %}
+      <p><b>Description</b><br>{{ incident.description }}</p>
+    {% else %}
+      <p class="muted">No description provided.</p>
+    {% endif %}
+  </div>
+
+  <div class="card actions">
+    <h2>Actions</h2>
+
+    <form method="post" action="{{ url_for('update_incident_status', incident_id=incident.id) }}">
+      <label>Update status</label>
+      <select name="status" required>
+        {% for st in ["Open","In Progress","Resolved"] %}
+          <option value="{{ st }}" {% if incident.status==st %}selected{% endif %}>{{ st }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" style="width:100%; margin-top:10px;">Save status</button>
+    </form>
+
+    <div class="divider"></div>
+
+    {% if is_owner %}
+      <a class="btn" href="{{ url_for('edit_incident', incident_id=incident.id) }}" style="width:100%;">Edit incident</a>
+      <a class="btn btn-danger" href="{{ url_for('delete_incident', incident_id=incident.id) }}" style="width:100%;">Delete incident</a>
+      <div class="muted" style="font-size:13px;">
+        Only the creator can edit or delete.
+      </div>
+    {% else %}
+      <div class="card" style="background: rgba(255,255,255,0.03);">
+        <b>Restricted</b>
+        <div class="muted" style="margin-top:6px;">
+          You can view and update status, but only the creator can edit or delete this incident.
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
 {% endblock %}

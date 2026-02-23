@@ -15,30 +15,71 @@ app.secret_key = "1a2b3c4d5e6f7g8h9i"
 def index():
     severity = request.args.get("severity", "")
     status = request.args.get("status", "")
+    scope = request.args.get("scope", "all")  # all | mine
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    query = "SELECT * FROM incidents WHERE 1=1"
+    base = """
+        FROM incidents i
+        JOIN users u ON u.id = i.created_by
+        WHERE 1=1
+    """
     params = []
 
+    if scope == "mine":
+        base += " AND i.created_by=%s"
+        params.append(session["user_id"])
+
     if severity:
-        query += " AND severity=%s"
+        base += " AND i.severity=%s"
         params.append(severity)
 
     if status:
-        query += " AND status=%s"
+        base += " AND i.status=%s"
         params.append(status)
 
-    query += " ORDER BY created_at DESC"
+    cursor.execute(
+        "SELECT COUNT(*) AS total " + base,
+        params,
+    )
+    total = cursor.fetchone()["total"]
 
-    cursor.execute(query, params)
+    cursor.execute(
+        "SELECT COUNT(*) AS open_count " + base + " AND i.status='Open'",
+        params,
+    )
+    open_count = cursor.fetchone()["open_count"]
+
+    cursor.execute(
+        "SELECT COUNT(*) AS critical_count " + base + " AND i.severity='Critical'",
+        params,
+    )
+    critical_count = cursor.fetchone()["critical_count"]
+
+    cursor.execute(
+        """
+        SELECT i.*, u.name AS creator_name
+        """ + base + """
+        ORDER BY i.created_at DESC
+        """,
+        params,
+    )
     incidents = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return render_template("index.html", incidents=incidents, severity=severity, status=status)
+    return render_template(
+        "index.html",
+        incidents=incidents,
+        severity=severity,
+        status=status,
+        scope=scope,
+        total=total,
+        open_count=open_count,
+        critical_count=critical_count,
+    )
 
 
 @app.route("/signup", methods=["GET", "POST"])
@@ -202,7 +243,15 @@ def incident_detail(incident_id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM incidents WHERE id=%s", (incident_id,))
+    cursor.execute(
+        """
+        SELECT i.*, u.name AS creator_name
+        FROM incidents i
+        JOIN users u ON u.id = i.created_by
+        WHERE i.id=%s
+        """,
+        (incident_id,),
+    )
     incident = cursor.fetchone()
 
     cursor.close()
@@ -211,7 +260,8 @@ def incident_detail(incident_id):
     if not incident:
         return "Incident not found", 404
 
-    return render_template("incident_detail.html", incident=incident)
+    is_owner = (incident["created_by"] == session["user_id"])
+    return render_template("incident_detail.html", incident=incident, is_owner=is_owner)
 
 @app.post("/incidents/<int:incident_id>/status")
 @login_required
@@ -255,7 +305,8 @@ def edit_incident(incident_id):
     if incident["created_by"] != session["user_id"]:
         cursor.close()
         conn.close()
-        return "Not allowed", 403
+        flash("You don’t have permission to edit this incident.", "error")
+        return redirect(url_for("incident_detail", incident_id=incident_id))
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()

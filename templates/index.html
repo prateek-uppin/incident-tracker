@@ -1,14 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row">
-  <h1>Incidents</h1>
 
-  <a class="btn" href="{{ url_for('export_csv', severity=severity, status=status) }}">
-    Export CSV
-  </a>
+<div class="row">
+  <div>
+    <h1>Incidents</h1>
+    <div class="muted">Track, update, and export operational incidents.</div>
+  </div>
+
+  <div class="row">
+    <a class="btn btn-green" href="{{ url_for('new_incident') }}">+ New incident</a>
+    <a class="btn" href="{{ url_for('export_csv', severity=severity, status=status, scope=scope) }}">Export CSV</a>
+  </div>
 </div>
 
+<div class="kpis">
+  <div class="kpi">
+    <div class="num">{{ total }}</div>
+    <div class="label">Total incidents</div>
+  </div>
+  <div class="kpi">
+    <div class="num">{{ open_count }}</div>
+    <div class="label">Open incidents</div>
+  </div>
+  <div class="kpi">
+    <div class="num">{{ critical_count }}</div>
+    <div class="label">Critical incidents</div>
+  </div>
+</div>
+
+<div style="height:12px;"></div>
+
 <form method="get" class="filters card">
+  <div>
+    <label>Scope</label>
+    <select name="scope">
+      <option value="all" {% if scope=="all" %}selected{% endif %}>All (Team)</option>
+      <option value="mine" {% if scope=="mine" %}selected{% endif %}>My incidents</option>
+    </select>
+  </div>
+
   <div>
     <label>Severity</label>
     <select name="severity">
@@ -32,25 +62,30 @@
   <button type="submit">Apply</button>
 </form>
 
-{% if incidents %}
-  <div class="list">
-    {% for incident in incidents %}
-      <a class="card item" href="{{ url_for('incident_detail', incident_id=incident.id) }}">
-        <div class="item-top">
-          <div class="title">{{ incident.title }}</div>
-          <div class="badge sev-{{ incident.severity|lower }}">{{ incident.severity }}</div>
+<div class="list">
+  {% for incident in incidents %}
+    <a class="card item" href="{{ url_for('incident_detail', incident_id=incident.id) }}">
+      <div class="item-top">
+        <div>
+          <h3>{{ incident.title }}</h3>
+          <div class="meta">
+            <span><b>Category:</b> {{ incident.category }}</span>
+            <span>•</span>
+            <span><b>By:</b> {{ incident.creator_name }}{% if incident.created_by == session.get("user_id") %} (You){% endif %}</span>
+            <span>•</span>
+            <span>{{ incident.created_at }}</span>
+          </div>
         </div>
-        <div class="meta">
-          <span>{{ incident.category }}</span>
-          <span>•</span>
-          <span class="status">{{ incident.status }}</span>
-          <span>•</span>
-          <span>{{ incident.created_at }}</span>
+
+        <div class="badges">
+          <span class="badge sev-{{ incident.severity|lower }}">{{ incident.severity }}</span>
+          <span class="badge st-{{ incident.status|lower|replace(' ','-') }}">{{ incident.status }}</span>
         </div>
-      </a>
-    {% endfor %}
-  </div>
-{% else %}
-  <div class="card">No incidents found.</div>
-{% endif %}
+      </div>
+    </a>
+  {% else %}
+    <div class="card">No incidents found.</div>
+  {% endfor %}
+</div>
+
 {% endblock %}
