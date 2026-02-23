@@ -163,7 +163,7 @@ def profile():
 def export_csv():
     severity = request.args.get("severity", "")
     status = request.args.get("status", "")
-    scope = request.args.get("scope", "all")  # all | mine
+    scope = request.args.get("scope", "all")  
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
